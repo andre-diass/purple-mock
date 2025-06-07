@@ -155,3 +155,26 @@ func NewConfigFromFile(cfgPath string) (Config, error) {
 
 	return cfg, nil
 }
+
+func NewConfigFileFromNodeAppInput(cfgPath string) (Config, error) {
+	if cfgPath == "" {
+		return Config{}, errInvalidConfigPath
+	}
+	configFile, err := os.Open(cfgPath)
+	if err != nil {
+		return Config{}, fmt.Errorf("%w: error trying to read config file: %s, using default configuration instead", err, cfgPath)
+	}
+	defer configFile.Close()
+
+	var cfg Config
+	bytes, _ := io.ReadAll(configFile)
+	if err := yaml.Unmarshal(bytes, &cfg); err != nil {
+		return Config{}, fmt.Errorf("%w: error while unmarshalling configFile file %s, using default configuration instead", err, cfgPath)
+	}
+
+	generateImposterFile("/product-orders-tracking-br/v1/users/b07b6c5d-f91c-3238-8f2d-1f045c676868/orders")
+
+	cfg.ImpostersPath = path.Join(path.Dir(cfgPath), cfg.ImpostersPath)
+
+	return cfg, nil
+}
