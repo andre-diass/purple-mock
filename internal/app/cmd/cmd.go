@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	killgrave "github.com/friendsofgo/killgrave/internal"
@@ -29,6 +31,7 @@ const (
 
 	_impostersFlag = "imposters"
 	_configFlag    = "config"
+	_autoApi       = "auto-api"
 	_hostFlag      = "host"
 	_portFlag      = "port"
 	_watcherFlag   = "watcher"
@@ -71,6 +74,7 @@ func NewKillgraveCmd() *cobra.Command {
 	rootCmd.ResetFlags()
 	rootCmd.PersistentFlags().StringP(_impostersFlag, "i", _defaultImpostersPath, "Directory where your imposters are located")
 	rootCmd.PersistentFlags().StringP(_configFlag, "c", _defaultConfigFile, "Path to your configuration file")
+	rootCmd.Flags().BoolP(_autoApi, "A", false, "Generate config file from vivo api lib")
 	rootCmd.Flags().StringP(_hostFlag, "H", _defaultHost, "Set a different host than localhost")
 	rootCmd.Flags().IntP(_portFlag, "P", _defaultPort, "Port to run the server")
 	rootCmd.Flags().BoolP(_watcherFlag, "w", false, "File watcher will reload the server on each file change")
@@ -160,6 +164,34 @@ func runWatcher(cfg killgrave.Config, currentSrv *server.Server) (*watcher.Watch
 }
 
 func prepareConfig(cmd *cobra.Command) (killgrave.Config, error) {
+	autoApi, _ := cmd.Flags().GetBool(_autoApi)
+	if autoApi {
+
+		// Essa parte do código precisa ser refeita pra integrar com o app node
+		choices := []string{"Tracking API", "Casa inteligente API", "Product orders API"}
+		fmt.Println("Selecione um item:")
+		for i, choice := range choices {
+			fmt.Printf("  [%d] %s\n", i+1, choice)
+		}
+
+		fmt.Print("Insira o número da sua escolha: ")
+		reader := bufio.NewReader(os.Stdin)
+		input, _ := reader.ReadString('\n')
+
+		index, err := strconv.Atoi(input[:len(input)-1])
+		if err != nil || index < 1 || index > len(choices) {
+			fmt.Println("Escolha inválida.")
+			return killgrave.Config{}, nil
+		}
+
+		selected := choices[index-1]
+		fmt.Println("You selected:", selected)
+		cfgPath, _ := cmd.Flags().GetString("config")
+		if cfgPath != "" {
+			return killgrave.NewConfigFileFromNodeAppInput(cfgPath)
+		}
+	}
+
 	cfgPath, _ := cmd.Flags().GetString("config")
 	if cfgPath != "" {
 		return killgrave.NewConfigFromFile(cfgPath)
